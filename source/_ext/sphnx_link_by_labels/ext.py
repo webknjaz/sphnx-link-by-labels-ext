@@ -44,6 +44,53 @@ def build_label_to_document_mapping(app, env):
     env.label_to_document_mapping = label_to_document_mapping
 
 
+def _make_replacement_doctree_node(requested_labels, labeled_doc_names):
+    documents_list_text = ', '.join(labeled_doc_names or 'NO DOCUMENTS FOUND')
+    requested_labels_text = ', '.join(requested_labels)
+
+    head_row = 'labels', 'documents'
+    body_rows = (
+        (requested_labels_text, documents_list_text),
+    )
+
+    columns_number = len(head_row)
+
+    table_node = nodes.table()
+
+    table_group_node = nodes.tgroup(cols=columns_number)
+    table_node += table_group_node
+
+    for _column_index in range(columns_number):
+        table_group_node += nodes.colspec()
+
+    table_head_node = nodes.thead()
+    table_group_node += table_head_node
+
+    table_head_row_node = nodes.row()
+    for table_head_column_title in head_row:
+        table_head_row_entry_node = nodes.entry()
+        table_head_row_entry_node += nodes.paragraph(
+            text=table_head_column_title,
+        )
+        table_head_row_node += table_head_row_entry_node
+    table_head_node += table_head_row_node
+
+    table_body_node = nodes.tbody()
+    table_group_node += table_body_node
+
+    table_body_row_node = nodes.row()
+    for body_row in body_rows:
+        for table_body_column_title in body_row:
+            table_body_row_entry_node = nodes.entry()
+            table_body_row_entry_node += nodes.paragraph(
+                text=table_body_column_title,
+            )
+            table_body_row_node += table_body_row_entry_node
+    table_body_node += table_body_row_node
+
+    return table_node
+
+
 def replace_label_request_nodes_with_doc_refs(app, doctree, docname):
     all_label_request_nodes = doctree.findall(LabelRequestNode)
     label_to_document_mapping = app.env.label_to_document_mapping
@@ -60,11 +107,10 @@ def replace_label_request_nodes_with_doc_refs(app, doctree, docname):
 
             labeled_doc_names |= doc_names
 
-        documents_list_text = ', '.join(labeled_doc_names or 'NO DOCUMENTS FOUND')
-        replacement_document_list_nodes = [nodes.Text(
-            f'The requested labels ({", ".join(requested_labels)}) are present '
-            f'in the following documents: {documents_list_text}.',
-        )]
+        replacement_document_list_nodes = _make_replacement_doctree_node(
+            requested_labels,
+            labeled_doc_names,
+        )
         label_request_node.replace_self(replacement_document_list_nodes)
 
 
